@@ -1,3 +1,25 @@
+-- ==========================================
+-- TROCA CERTA - Setup COMPLETO (Limpa e Recria)
+-- Execute este SQL no Supabase SQL Editor
+-- ==========================================
+
+-- ==========================================
+-- PASSO 1: LIMPAR TUDO
+-- ==========================================
+DROP TABLE IF EXISTS public.messages CASCADE;
+DROP TABLE IF EXISTS public.trade_requests CASCADE;
+DROP TABLE IF EXISTS public.items CASCADE;
+DROP TABLE IF EXISTS public.profiles CASCADE;
+DROP FUNCTION IF EXISTS public.handle_new_user() CASCADE;
+
+-- ==========================================
+-- PASSO 2: EXTENSÕES
+-- ==========================================
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- ==========================================
+-- PASSO 3: TABELA profiles
+-- ==========================================
 CREATE TABLE public.profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
@@ -15,8 +37,11 @@ CREATE POLICY "Users can update own profile"
 CREATE POLICY "Users can insert own profile"
   ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id);
 
+-- ==========================================
+-- PASSO 4: TABELA items
+-- ==========================================
 CREATE TABLE public.items (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
   description TEXT,
@@ -41,8 +66,11 @@ CREATE POLICY "Users can update own items"
 CREATE POLICY "Users can delete own items"
   ON public.items FOR DELETE USING (auth.uid() = user_id);
 
+-- ==========================================
+-- PASSO 5: TABELA trade_requests
+-- ==========================================
 CREATE TABLE public.trade_requests (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   offered_item_id UUID NOT NULL REFERENCES public.items(id) ON DELETE CASCADE,
   requested_item_id UUID NOT NULL REFERENCES public.items(id) ON DELETE CASCADE,
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'rejected', 'finished')),
@@ -77,9 +105,11 @@ CREATE POLICY "Item owners can update trade requests"
     )
   );
 
--- Tabela de mensagens
+-- ==========================================
+-- PASSO 6: TABELA messages
+-- ==========================================
 CREATE TABLE public.messages (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   trade_id UUID NOT NULL REFERENCES public.trade_requests(id) ON DELETE CASCADE,
   sender_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   content TEXT NOT NULL,
@@ -113,6 +143,9 @@ CREATE POLICY "Users can send messages to their trades"
     )
   );
 
+-- ==========================================
+-- PASSO 7: TRIGGER auto-create profile
+-- ==========================================
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
@@ -126,6 +159,9 @@ CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users FOR EACH ROW
   EXECUTE FUNCTION public.handle_new_user();
 
+-- ==========================================
+-- PASSO 8: ÍNDICES
+-- ==========================================
 CREATE INDEX idx_items_user_id ON public.items(user_id);
 CREATE INDEX idx_items_status ON public.items(status);
 CREATE INDEX idx_items_type ON public.items(type);
@@ -134,3 +170,7 @@ CREATE INDEX idx_trade_requests_requested_item ON public.trade_requests(requeste
 CREATE INDEX idx_trade_requests_status ON public.trade_requests(status);
 CREATE INDEX idx_messages_trade_id ON public.messages(trade_id);
 CREATE INDEX idx_messages_sender_id ON public.messages(sender_id);
+
+-- ==========================================
+-- PRONTO! Banco configurado com sucesso!
+-- ==========================================

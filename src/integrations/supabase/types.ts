@@ -23,6 +23,7 @@ export type Database = {
           image_url: string | null
           status: string
           title: string
+          type: string
           user_id: string
         }
         Insert: {
@@ -33,6 +34,7 @@ export type Database = {
           image_url?: string | null
           status?: string
           title: string
+          type?: string
           user_id: string
         }
         Update: {
@@ -43,12 +45,52 @@ export type Database = {
           image_url?: string | null
           status?: string
           title?: string
+          type?: string
           user_id?: string
         }
         Relationships: [
           {
             foreignKeyName: "items_user_id_fkey"
             columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          id: string
+          trade_id: string
+          sender_id: string
+          content: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          trade_id: string
+          sender_id: string
+          content: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          trade_id?: string
+          sender_id?: string
+          content?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_trade_id_fkey"
+            columns: ["trade_id"]
+            isOneToOne: false
+            referencedRelation: "trade_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_sender_id_fkey"
+            columns: ["sender_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -80,6 +122,8 @@ export type Database = {
           offered_item_id: string
           requested_item_id: string
           status: string
+          confirmed_by_requester: boolean
+          confirmed_by_offerer: boolean
         }
         Insert: {
           created_at?: string
@@ -87,6 +131,8 @@ export type Database = {
           offered_item_id: string
           requested_item_id: string
           status?: string
+          confirmed_by_requester?: boolean
+          confirmed_by_offerer?: boolean
         }
         Update: {
           created_at?: string
@@ -94,6 +140,8 @@ export type Database = {
           offered_item_id?: string
           requested_item_id?: string
           status?: string
+          confirmed_by_requester?: boolean
+          confirmed_by_offerer?: boolean
         }
         Relationships: [
           {

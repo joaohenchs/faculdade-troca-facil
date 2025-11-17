@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowRight, Check, X } from "lucide-react";
+import { ArrowRight, Check, X, MessageCircle, Gift } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -14,11 +14,14 @@ interface TradeRequest {
   id: string;
   status: string;
   created_at: string;
+  confirmed_by_requester: boolean;
+  confirmed_by_offerer: boolean;
   offered_item: {
     id: string;
     title: string;
     image_url: string | null;
     user_id: string;
+    type: string;
     profiles: {
       name: string;
     };
@@ -28,6 +31,7 @@ interface TradeRequest {
     title: string;
     image_url: string | null;
     user_id: string;
+    type: string;
     profiles: {
       name: string;
     };
@@ -55,17 +59,16 @@ export default function Trades() {
 
   const fetchTrades = async () => {
     try {
-      // Fetch all trades
       const { data, error } = await supabase
         .from("trade_requests")
         .select(`
           *,
           offered_item:items!trade_requests_offered_item_id_fkey(
-            id, title, image_url, user_id,
+            id, title, image_url, user_id, type,
             profiles:user_id(name)
           ),
           requested_item:items!trade_requests_requested_item_id_fkey(
-            id, title, image_url, user_id,
+            id, title, image_url, user_id, type,
             profiles:user_id(name)
           )
         `)
@@ -73,7 +76,6 @@ export default function Trades() {
 
       if (error) throw error;
 
-      // Filter trades
       const sent = data?.filter((trade: any) => trade.offered_item.user_id === user?.id) || [];
       const received = data?.filter((trade: any) => trade.requested_item.user_id === user?.id) || [];
 
@@ -87,9 +89,8 @@ export default function Trades() {
     }
   };
 
-  const handleAccept = async (tradeId: string, offeredItemId: string, requestedItemId: string) => {
+  const handleAccept = async (tradeId: string) => {
     try {
-      // Update trade status
       const { error: tradeError } = await supabase
         .from("trade_requests")
         .update({ status: "accepted" })
@@ -97,16 +98,10 @@ export default function Trades() {
 
       if (tradeError) throw tradeError;
 
-      // Update items status
-      const { error: itemsError } = await supabase
-        .from("items")
-        .update({ status: "traded" })
-        .in("id", [offeredItemId, requestedItemId]);
-
-      if (itemsError) throw itemsError;
-
-      toast.success("Troca aceita com sucesso!");
+      toast.success("Proposta aceita! Agora vocês podem conversar para combinar os detalhes.");
       fetchTrades();
+      // Navigate to chat
+      navigate(`/chat/${tradeId}`);
     } catch (error: any) {
       console.error("Erro ao aceitar troca:", error);
       toast.error("Erro ao aceitar troca");
@@ -131,94 +126,129 @@ export default function Trades() {
   };
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, { variant: "default" | "secondary" | "destructive", label: string }> = {
-      pending: { variant: "default", label: "Pendente" },
-      accepted: { variant: "default", label: "Aceita" },
+    const variants: Record<string, { variant: "default" | "secondary" | "destructive" | "outline", label: string }> = {
+      pending: { variant: "outline", label: "Pendente" },
+      accepted: { variant: "default", label: "Em Negociação" },
+      confirmed: { variant: "secondary", label: "Confirmada" },
       rejected: { variant: "destructive", label: "Recusada" },
-      finished: { variant: "secondary", label: "Concluída" },
+      cancelled: { variant: "destructive", label: "Cancelada" },
     };
     const config = variants[status] || variants.pending;
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
-  const TradeCard = ({ trade, isReceived }: { trade: TradeRequest; isReceived: boolean }) => (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-base">
-            Troca com {isReceived ? trade.offered_item.profiles?.name : trade.requested_item.profiles?.name}
-          </CardTitle>
-          {getStatusBadge(trade.status)}
-        </div>
-        <p className="text-sm text-muted-foreground">
-          {new Date(trade.created_at).toLocaleDateString("pt-BR")}
-        </p>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-[1fr_auto_1fr] gap-4 items-center">
-          <div className="text-center">
-            <div className="aspect-video bg-muted rounded-lg mb-2 overflow-hidden">
-              {trade.offered_item.image_url ? (
-                <img
-                  src={trade.offered_item.image_url}
-                  alt={trade.offered_item.title}
-                  className="w-full h-full object-cover"
-                />
+  const isDonation = (trade: TradeRequest) => {
+    return trade.requested_item.type === "donation";
+  };
+
+  const TradeCard = ({ trade, isReceived }: { trade: TradeRequest; isReceived: boolean }) => {
+    const donation = isDonation(trade);
+
+    return (
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base">
+              {donation ? (
+                <span className="flex items-center gap-1">
+                  <Gift className="h-4 w-4" />
+                  Doação {isReceived ? "de" : "para"} {isReceived ? trade.offered_item.profiles?.name : trade.requested_item.profiles?.name}
+                </span>
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                  Sem imagem
-                </div>
+                `Troca com ${isReceived ? trade.offered_item.profiles?.name : trade.requested_item.profiles?.name}`
               )}
-            </div>
-            <p className="font-medium text-sm">{trade.offered_item.title}</p>
+            </CardTitle>
+            {getStatusBadge(trade.status)}
           </div>
-
-          <ArrowRight className="h-5 w-5 text-muted-foreground" />
-
-          <div className="text-center">
-            <div className="aspect-video bg-muted rounded-lg mb-2 overflow-hidden">
-              {trade.requested_item.image_url ? (
-                <img
-                  src={trade.requested_item.image_url}
-                  alt={trade.requested_item.title}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                  Sem imagem
+          <p className="text-sm text-muted-foreground">
+            {new Date(trade.created_at).toLocaleDateString("pt-BR")}
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className={`grid ${donation ? "grid-cols-1" : "grid-cols-[1fr_auto_1fr]"} gap-4 items-center`}>
+            {!donation && (
+              <>
+                <div className="text-center">
+                  <div className="aspect-video bg-muted rounded-lg mb-2 overflow-hidden">
+                    {trade.offered_item.image_url ? (
+                      <img
+                        src={trade.offered_item.image_url}
+                        alt={trade.offered_item.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                        Sem imagem
+                      </div>
+                    )}
+                  </div>
+                  <p className="font-medium text-sm">{trade.offered_item.title}</p>
+                  <p className="text-xs text-muted-foreground">Oferecido</p>
                 </div>
-              )}
-            </div>
-            <p className="font-medium text-sm">{trade.requested_item.title}</p>
-          </div>
-        </div>
 
-        {isReceived && trade.status === "pending" && (
-          <div className="flex gap-2 mt-4">
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex-1"
-              onClick={() => handleReject(trade.id)}
-            >
-              <X className="h-4 w-4 mr-1" />
-              Recusar
-            </Button>
-            <Button
-              size="sm"
-              className="flex-1"
-              onClick={() =>
-                handleAccept(trade.id, trade.offered_item.id, trade.requested_item.id)
-              }
-            >
-              <Check className="h-4 w-4 mr-1" />
-              Aceitar
-            </Button>
+                <ArrowRight className="h-5 w-5 text-muted-foreground" />
+              </>
+            )}
+
+            <div className="text-center">
+              <div className="aspect-video bg-muted rounded-lg mb-2 overflow-hidden">
+                {trade.requested_item.image_url ? (
+                  <img
+                    src={trade.requested_item.image_url}
+                    alt={trade.requested_item.title}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                    Sem imagem
+                  </div>
+                )}
+              </div>
+              <p className="font-medium text-sm">{trade.requested_item.title}</p>
+              <p className="text-xs text-muted-foreground">
+                {donation ? "Item para doação" : "Solicitado"}
+              </p>
+            </div>
           </div>
-        )}
-      </CardContent>
-    </Card>
-  );
+
+          {isReceived && trade.status === "pending" && (
+            <div className="flex gap-2 mt-4">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1"
+                onClick={() => handleReject(trade.id)}
+              >
+                <X className="h-4 w-4 mr-1" />
+                Recusar
+              </Button>
+              <Button
+                size="sm"
+                className="flex-1"
+                onClick={() => handleAccept(trade.id)}
+              >
+                <Check className="h-4 w-4 mr-1" />
+                Aceitar
+              </Button>
+            </div>
+          )}
+
+          {trade.status === "accepted" && (
+            <div className="mt-4">
+              <Button
+                size="sm"
+                className="w-full"
+                onClick={() => navigate(`/chat/${trade.id}`)}
+              >
+                <MessageCircle className="h-4 w-4 mr-1" />
+                Abrir Chat
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
 
   if (loading || loadingTrades) {
     return (

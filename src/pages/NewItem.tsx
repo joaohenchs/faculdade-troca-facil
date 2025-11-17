@@ -6,10 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { ImageUpload } from "@/components/ImageUpload";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { Gift, Repeat } from "lucide-react";
 
 const categories = [
   "Eletrônicos",
@@ -31,6 +34,7 @@ export default function NewItem() {
     description: "",
     category: "",
     imageUrl: "",
+    type: "trade" as "trade" | "donation",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -46,11 +50,15 @@ export default function NewItem() {
         category: formData.category,
         image_url: formData.imageUrl || null,
         status: "available",
+        type: formData.type,
       });
 
       if (error) throw error;
 
-      toast.success("Item cadastrado com sucesso!");
+      const successMessage = formData.type === "donation"
+        ? "Item para doação cadastrado com sucesso!"
+        : "Item para troca cadastrado com sucesso!";
+      toast.success(successMessage);
       navigate("/");
     } catch (error: any) {
       console.error("Erro ao criar item:", error);
@@ -67,9 +75,58 @@ export default function NewItem() {
         <Card>
           <CardHeader>
             <CardTitle>Adicionar Novo Item</CardTitle>
+            <CardDescription>
+              Cadastre um item para troca ou doação
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-3">
+                <Label>Tipo de Anúncio *</Label>
+                <RadioGroup
+                  value={formData.type}
+                  onValueChange={(value: "trade" | "donation") =>
+                    setFormData({ ...formData, type: value })
+                  }
+                  className="grid grid-cols-2 gap-4"
+                >
+                  <div>
+                    <RadioGroupItem
+                      value="trade"
+                      id="trade"
+                      className="peer sr-only"
+                    />
+                    <Label
+                      htmlFor="trade"
+                      className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
+                    >
+                      <Repeat className="mb-3 h-6 w-6" />
+                      <span className="font-semibold">Troca</span>
+                      <span className="text-xs text-muted-foreground text-center mt-1">
+                        Quero trocar por outro item
+                      </span>
+                    </Label>
+                  </div>
+                  <div>
+                    <RadioGroupItem
+                      value="donation"
+                      id="donation"
+                      className="peer sr-only"
+                    />
+                    <Label
+                      htmlFor="donation"
+                      className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
+                    >
+                      <Gift className="mb-3 h-6 w-6" />
+                      <span className="font-semibold">Doação</span>
+                      <span className="text-xs text-muted-foreground text-center mt-1">
+                        Quero doar gratuitamente
+                      </span>
+                    </Label>
+                  </div>
+                </RadioGroup>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="title">Título *</Label>
                 <Input
@@ -112,16 +169,13 @@ export default function NewItem() {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="imageUrl">URL da Imagem</Label>
-                <Input
-                  id="imageUrl"
-                  type="url"
-                  placeholder="https://exemplo.com/imagem.jpg"
+              {user && (
+                <ImageUpload
                   value={formData.imageUrl}
-                  onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                  onChange={(url) => setFormData({ ...formData, imageUrl: url })}
+                  userId={user.id}
                 />
-              </div>
+              )}
 
               <div className="flex gap-4">
                 <Button type="button" variant="outline" onClick={() => navigate("/")} className="flex-1">

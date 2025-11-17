@@ -11,6 +11,7 @@ import NewItem from "./pages/NewItem";
 import ItemDetail from "./pages/ItemDetail";
 import NewTrade from "./pages/NewTrade";
 import Trades from "./pages/Trades";
+import Chat from "./pages/Chat";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/items/:id" element={<ItemDetail />} />
             <Route path="/trade/new" element={<NewTrade />} />
             <Route path="/trades" element={<Trades />} />
+            <Route path="/chat/:tradeId" element={<Chat />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

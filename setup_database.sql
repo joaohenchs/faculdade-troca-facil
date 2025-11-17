@@ -1,3 +1,14 @@
+-- ==========================================
+-- TROCA CERTA - Setup Completo do Banco
+-- Execute este SQL no Supabase SQL Editor
+-- Link: https://supabase.com/dashboard/project/qvynddsmkbtbutshhlplk/sql
+-- ==========================================
+
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- ==========================================
+-- TABELA: profiles (Perfis de usuários)
+-- ==========================================
 CREATE TABLE public.profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
@@ -15,8 +26,11 @@ CREATE POLICY "Users can update own profile"
 CREATE POLICY "Users can insert own profile"
   ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id);
 
+-- ==========================================
+-- TABELA: items (Itens para troca/doação)
+-- ==========================================
 CREATE TABLE public.items (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
   description TEXT,
@@ -41,8 +55,11 @@ CREATE POLICY "Users can update own items"
 CREATE POLICY "Users can delete own items"
   ON public.items FOR DELETE USING (auth.uid() = user_id);
 
+-- ==========================================
+-- TABELA: trade_requests (Solicitações de troca)
+-- ==========================================
 CREATE TABLE public.trade_requests (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   offered_item_id UUID NOT NULL REFERENCES public.items(id) ON DELETE CASCADE,
   requested_item_id UUID NOT NULL REFERENCES public.items(id) ON DELETE CASCADE,
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'rejected', 'finished')),
@@ -77,9 +94,11 @@ CREATE POLICY "Item owners can update trade requests"
     )
   );
 
--- Tabela de mensagens
+-- ==========================================
+-- TABELA: messages (Mensagens do chat)
+-- ==========================================
 CREATE TABLE public.messages (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   trade_id UUID NOT NULL REFERENCES public.trade_requests(id) ON DELETE CASCADE,
   sender_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   content TEXT NOT NULL,
@@ -113,6 +132,9 @@ CREATE POLICY "Users can send messages to their trades"
     )
   );
 
+-- ==========================================
+-- TRIGGER: Criar perfil automaticamente
+-- ==========================================
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
@@ -126,6 +148,9 @@ CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users FOR EACH ROW
   EXECUTE FUNCTION public.handle_new_user();
 
+-- ==========================================
+-- ÍNDICES: Performance
+-- ==========================================
 CREATE INDEX idx_items_user_id ON public.items(user_id);
 CREATE INDEX idx_items_status ON public.items(status);
 CREATE INDEX idx_items_type ON public.items(type);
