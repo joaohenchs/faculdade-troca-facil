@@ -7,6 +7,15 @@ export default defineConfig({
     host: "::",
     port: 8080,
   },
+  preview: {
+    host: "0.0.0.0",
+    port: 3000,
+    allowedHosts: [
+      "localhost",
+      ".railway.app",
+      ".up.railway.app",
+    ],
+  },
   plugins: [react()],
   resolve: {
     alias: {
