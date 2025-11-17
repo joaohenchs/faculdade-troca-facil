@@ -40,25 +40,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const signUp = async (email: string, password: string, name: string) => {
-    try {
-      const redirectUrl = `${window.location.origin}/`;
+    const redirectUrl = `${window.location.origin}/`;
 
-      const { error, data } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: redirectUrl,
-          data: { name }
-        }
-      });
-
-      if (error) throw error;
-
-      if (data?.user) {
-        toast.success("Conta criada! Verifique seu email.");
-        // Don't navigate - let the Auth component show the confirmation screen
+    const { error, data } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: redirectUrl,
+        data: { name }
       }
-    } catch (error: any) {
+    });
+
+    if (error) {
       console.error("Erro no cadastro:", error);
       if (error.message?.includes("already registered")) {
         toast.error("Este email já está cadastrado");
@@ -66,6 +59,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         toast.error(error.message || "Erro ao criar conta");
       }
       throw error;
+    }
+
+    if (data?.user) {
+      toast.success("Conta criada! Verifique seu email.");
+      // Don't navigate - let the Auth component show the confirmation screen
     }
   };
 
