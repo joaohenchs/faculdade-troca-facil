@@ -42,7 +42,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signUp = async (email: string, password: string, name: string) => {
     try {
       const redirectUrl = `${window.location.origin}/`;
-      
+
       const { error, data } = await supabase.auth.signUp({
         email,
         password,
@@ -53,10 +53,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
 
       if (error) throw error;
-      
+
       if (data?.user) {
-        toast.success("Conta criada com sucesso!");
-        navigate("/");
+        toast.success("Conta criada! Verifique seu email.");
+        // Don't navigate - let the Auth component show the confirmation screen
       }
     } catch (error: any) {
       console.error("Erro no cadastro:", error);

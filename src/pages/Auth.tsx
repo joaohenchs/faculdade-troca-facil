@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Repeat, Gift, ArrowLeftRight, Users, Sparkles } from "lucide-react";
+import { Repeat, Gift, ArrowLeftRight, Users, Sparkles, Mail, CheckCircle } from "lucide-react";
 
 export default function Auth() {
   const { signIn, signUp } = useAuth();
@@ -15,6 +15,8 @@ export default function Auth() {
   const [signupPassword, setSignupPassword] = useState("");
   const [signupName, setSignupName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState("");
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,10 +37,86 @@ export default function Auth() {
     setLoading(true);
     try {
       await signUp(signupEmail, signupPassword, signupName);
+      setRegisteredEmail(signupEmail);
+      setEmailSent(true);
+    } catch (error) {
+      // Error is handled in useAuth
     } finally {
       setLoading(false);
     }
   };
+
+  if (emailSent) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-6">
+        <Card className="w-full max-w-md shadow-large border-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm animate-scale-in">
+          <CardHeader className="space-y-1 text-center pb-2">
+            <div className="flex justify-center mb-4">
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full blur-lg opacity-40" />
+                <div className="relative bg-gradient-to-br from-green-500 to-emerald-600 p-4 rounded-full shadow-lg">
+                  <CheckCircle className="h-12 w-12 text-white" />
+                </div>
+              </div>
+            </div>
+            <CardTitle className="text-2xl font-bold text-green-600">
+              Conta Criada com Sucesso!
+            </CardTitle>
+            <CardDescription className="text-base">
+              Verifique seu email para ativar sua conta
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-4 space-y-6">
+            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+              <div className="flex items-start gap-3">
+                <Mail className="h-6 w-6 text-blue-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="font-medium text-blue-900 dark:text-blue-100 mb-1">
+                    Link de verificação enviado!
+                  </p>
+                  <p className="text-sm text-blue-700 dark:text-blue-300">
+                    Enviamos um email para:
+                  </p>
+                  <p className="text-sm font-semibold text-blue-900 dark:text-blue-100 mt-1">
+                    {registeredEmail}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3 text-sm text-muted-foreground">
+              <p className="flex items-center gap-2">
+                <span className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">1</span>
+                Abra seu email
+              </p>
+              <p className="flex items-center gap-2">
+                <span className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">2</span>
+                Clique no link de verificação
+              </p>
+              <p className="flex items-center gap-2">
+                <span className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">3</span>
+                Volte aqui e faça login
+              </p>
+            </div>
+
+            <div className="pt-2">
+              <Button
+                onClick={() => setEmailSent(false)}
+                variant="outline"
+                className="w-full"
+              >
+                Voltar para Login
+              </Button>
+            </div>
+
+            <p className="text-xs text-center text-muted-foreground">
+              Não recebeu o email? Verifique sua caixa de spam ou tente novamente.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex">
